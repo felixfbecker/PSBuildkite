@@ -5,6 +5,8 @@
 
 Module to interact with the [Buildkite API](https://buildkite.com/docs/apis/rest-api) from PowerShell.
 
+## Example
+
 ```powershell
 # Show logs of all jobs of the latest build
 (Get-BuildkiteBuild -PerPage 1).jobs | Get-BuildkiteJobLog
