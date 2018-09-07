@@ -21,7 +21,7 @@ Install-Module PSBuildkite
 - `Get-BuildkiteOrganization`
 - `Get-BuildkitePipeline`
 - `Get-BuildkiteBuild`
-- `Get-BuildkiteJobLogs`
+- `Get-BuildkiteJobLog`
 - `Get-BuildkiteCruiseControlFeedUrl`
 
 Missing something? PRs welcome!
