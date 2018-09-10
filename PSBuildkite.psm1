@@ -23,7 +23,7 @@ function Invoke-BuildkiteAPIRequest {
         [ValidateNotNullOrEmpty()]
         [Security.SecureString] $Token
     )
-    $uri = [Uri]::new([Uri]::new('https://api.buildkite.com/v2/'), $Path)
+    $uri = [Uri]::new([Uri]::new('https://api.buildkite.com/v2/'), $Path).ToString()
     $decodedToken = [PSCredential]::new('dummy', $Token).GetNetworkCredential().Password
     $header = @{
         "Authorization" = "Bearer $decodedToken"
@@ -35,10 +35,12 @@ function Invoke-BuildkiteAPIRequest {
     if ($Method -ne [WebRequestMethod]::Get) {
         $Body = $Body | ConvertTo-Json
     }
-    $query = [Web.HttpUtility]::ParseQueryString($uri.Query)
-    $query['page'] = $Page
-    $query['per_page'] = $PerPage
-    $uri = [Uri]::new($uri, '?' + $query.ToString())
+    if ($uri.Contains('?')) {
+        $uri += '&'
+    } else {
+        $uri += '?'
+    }
+    $uri += "page=$Page&per_page$PerPage"
     if ($Method -eq [WebRequestMethod]::Get -or $PSCmdlet.ShouldProcess("Invoke", "Invoke Buildkite API request?", "API request")) {
         Invoke-RestMethod `
             -Method $Method `
@@ -55,6 +57,10 @@ function Get-BuildkiteBuild {
         [string] $Organization,
         [string] $Pipeline,
         [string] $Branch,
+
+        [ValidateSet('running', 'scheduled', 'passed', 'failed', 'blocked', 'canceled', 'canceling', 'skipped', 'not_run', 'finished')]
+        [string[]] $State,
+
         [int] $Number,
 
         [ValidateRange(1, [int]::MaxValue)]
@@ -75,11 +81,11 @@ function Get-BuildkiteBuild {
     } else {
         "builds"
     }
-    $query = @{}
-    if ($Branch) {
-        $query['branch'] = $Branch
+    if ($State) {
+        $path += "?" + (($State | ForEach-Object { Write-Verbose "state $_"; "state[]=$_" }) -join '&')
     }
-    Invoke-BuildkiteAPIRequest $path -Body $query -Token $Token -Page $Page -PerPage $PerPage
+
+    Invoke-BuildkiteAPIRequest $path -Token $Token -Page $Page -PerPage $PerPage
 }
 
 function Get-BuildkiteOrganization {
@@ -154,7 +160,7 @@ function Get-BuildkiteJobLog {
         [ValidateNotNullOrEmpty()]
         [Security.SecureString] $Token
     )
-    
+
     process {
         $LogUrl = if ($Job) {
             if ($Job.type -ne 'script') {
@@ -174,7 +180,7 @@ function Get-BuildkiteCruiseControlFeedUrl {
     param(
         [Parameter(Mandatory, Position = 0, ValueFromPipelineByPropertyName, ParameterSetName = 'explicit')]
         [string] $Organization,
-        
+
         [Parameter(Mandatory, Position = 1, ValueFromPipelineByPropertyName, ParameterSetName = 'explicit')]
         [Alias('slug')]
         [string] $Pipeline,
@@ -185,7 +191,7 @@ function Get-BuildkiteCruiseControlFeedUrl {
 
         [Parameter()]
         [string] $Branch,
-        
+
         [Parameter(Mandatory)]
         [securestring] $Token
     )
