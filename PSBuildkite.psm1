@@ -47,7 +47,8 @@ function Invoke-BuildkiteAPIRequest {
             -Uri $uri `
             -Header $header `
             -ContentType 'application/json' `
-            -Body $Body
+            -Body $Body `
+            -FollowRelLink
     }
 }
 

@@ -28,6 +28,13 @@ Install-Module PSBuildkite
 
 Missing something? PRs welcome!
 
+## Pagination
+
+Pagination will always happen automatically, i.e. `Get-` cmdlet will follow `next` relation links and stream objects till the end of the list is reached.
+In the case of builds, this can be virtually forever - you can stop after n objects were found by using `Select-Object -First $n`, or manually with <kbd>CTRL</kbd>+<kbd>C</kbd>.
+Pagination can also be controlled manually with the `-Page` and `-PerPage` parameters.
+`-Page` can be used to skip entries, while `-PerPage` can be used to fine-tune performance.
+
 ## Authentication
 
 To access private repositories, make changes and have a higher rate limit, [create a Buildkite API token](https://buildkite.com/user/api-access-tokens).
