@@ -83,7 +83,7 @@ function Get-BuildkiteBuild {
         "builds"
     }
     if ($State) {
-        $path += "?" + (($State | ForEach-Object { Write-Verbose "state $_"; "state[]=$_" }) -join '&')
+        $path += "?" + (($State | ForEach-Object { "state[]=$_" }) -join '&')
     }
 
     Invoke-BuildkiteAPIRequest $path -Token $Token -Page $Page -PerPage $PerPage
