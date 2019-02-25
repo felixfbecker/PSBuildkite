@@ -209,40 +209,62 @@ function Get-BuildkiteCruiseControlFeedUrl {
     $url
 }
 
-# $organizationCompleter = {
-#     [CmdletBinding()]
-#     param([string]$commandName, [string]$parameterName, [string]$wordToComplete, [CommandAst]$commandAst, [Hashtable]$fakeBoundParameter)
-#     $params = @{}
-#     $params.Remove('Slug') | Out-Null
-#     $params.Remove('Organization') | Out-Null
-#     try {
-#         Get-BuildkiteOrganization @params |
-#             ForEach-Object { $_.Name } |
-#             Where-Object { $_ -like "$wordToComplete*" } |
-#             ForEach-Object { [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, $_) }
-#     } catch {
-#         $_ | Write-Verbose
-#     }
-# }
+# Workaround for https://github.com/PowerShell/PowerShell/issues/7735
+function Add-DefaultParamterValues([string] $Command, [hashtable] $Parameters) {
+    foreach ($entry in $global:PSDefaultParameterValues.GetEnumerator()) {
+        $commandPattern, $parameter = $entry.Key.Split(':')
+        if ($Command -like $commandPattern) {
+            $Parameters.Add($parameter, $entry.Value)
+        }
+    }
+}
 
-# $pipelineCompleter = {
-#     [CmdletBinding()]
-#     param([string]$commandName, [string]$parameterName, [string]$wordToComplete, [CommandAst]$commandAst, [Hashtable]$fakeBoundParameter)
+$organizationCompleter = {
+    [CmdletBinding()]
+    param([string]$command, [string]$parameter, [string]$wordToComplete, [CommandAst]$commandAst, [Hashtable]$params)
+    Add-DefaultParamterValues -Command $command -Parameters $params
+    if (-not $params.ContainsKey('Token')) {
+        return
+    }
+    Get-BuildkiteOrganization -Token $params['Token'] |
+        ForEach-Object { $_.Slug } |
+        Where-Object { $_ -like "$wordToComplete*" } |
+        ForEach-Object { [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, $_) }
+}
 
-#     if (-not $fakeBoundParameter.ContainsKey('Organization')) {
-#         return
-#     }
+$pipelineCompleter = {
+    [CmdletBinding()]
+    param([string]$command, [string]$parameter, [string]$wordToComplete, [CommandAst]$commandAst, [Hashtable]$params)
+    Add-DefaultParamterValues -Command $command -Parameters $params
+    if (-not $params.ContainsKey('Organization') -or -not $params.ContainsKey('Token')) {
+        return
+    }
 
-#     Get-BuildkitePipeline -Organization $fakeBoundParameter['Organization'] -Token $fakeBoundParameter['Token'] |
-#         ForEach-Object { $_.Name } |
-#         Where-Object { $_ -like "$wordToComplete*" } |
-#         ForEach-Object { [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, $_) }
-# }
+    Get-BuildkitePipeline -Organization $params['Organization'] -Token $params['Token'] |
+        ForEach-Object { $_.Slug } |
+        Where-Object { $_ -like "$wordToComplete*" } |
+        ForEach-Object { [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, $_) }
+}
 
-# Register-ArgumentCompleter -CommandName Get-BuildkiteOrganization -ParameterName Slug -ScriptBlock $organizationCompleter
-# Register-ArgumentCompleter -CommandName Get-BuildkitePipeline -ParameterName Organization -ScriptBlock $organizationCompleter
-# Register-ArgumentCompleter -CommandName Get-BuildkitePipeline -ParameterName Pipeline -ScriptBlock $pipelineCompleter
-# Register-ArgumentCompleter -CommandName Get-BuildkiteCruiseControlFeedUrl -ParameterName Pipeline -ScriptBlock $pipelineCompleter
-# Register-ArgumentCompleter -CommandName Get-BuildkiteCruiseControlFeedUrl -ParameterName Organization -ScriptBlock $organizationCompleter
-# Register-ArgumentCompleter -CommandName Get-BuildkiteBuild -ParameterName Organization -ScriptBlock $organizationCompleter
-# Register-ArgumentCompleter -CommandName Get-BuildkiteBuild -ParameterName Pipeline -ScriptBlock $pipelineCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkiteOrganization -ParameterName Slug -ScriptBlock $organizationCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkitePipeline -ParameterName Organization -ScriptBlock $organizationCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkitePipeline -ParameterName Pipeline -ScriptBlock $pipelineCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkiteCruiseControlFeedUrl -ParameterName Pipeline -ScriptBlock $pipelineCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkiteCruiseControlFeedUrl -ParameterName Organization -ScriptBlock $organizationCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkiteBuild -ParameterName Organization -ScriptBlock $organizationCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkiteBuild -ParameterName Pipeline -ScriptBlock $pipelineCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkiteCruiseControlFeedUrl -ParameterName Organization -ScriptBlock $organizationCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkiteCruiseControlFeedUrl -ParameterName Pipeline -ScriptBlock $pipelineCompleter
+Register-ArgumentCompleter -CommandName Get-BuildkiteCruiseControlFeedUrl -ParameterName Branch -ScriptBlock {
+    [CmdletBinding()]
+    param([string]$command, [string]$parameter, [string]$wordToComplete, [CommandAst]$commandAst, [Hashtable]$params)
+    Add-DefaultParamterValues -Command $command -Parameters $params
+    if (-not $params.ContainsKey('Organization') -or -not $params.ContainsKey('Token')) {
+        return
+    }
+
+    Get-BuildkitePipeline -Organization $params['Organization'] -Slug $params['Pipeline'] -Token $params['Token'] |
+        ForEach-Object { $_.default_branch } |
+        Where-Object { $_ -like "$wordToComplete*" } |
+        ForEach-Object { [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, $_) }
+}
