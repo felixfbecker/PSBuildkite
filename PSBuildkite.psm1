@@ -35,12 +35,21 @@ function Invoke-BuildkiteAPIRequest {
     if ($Method -ne [WebRequestMethod]::Get) {
         $Body = $Body | ConvertTo-Json
     }
-    if ($uri.Contains('?')) {
-        $uri += '&'
-    } else {
-        $uri += '?'
+    [string[]]$search = @()
+    if ($PSBoundParameters.ContainsKey('Page')) {
+        $search += "page=$Page"
     }
-    $uri += "page=$Page&per_page$PerPage"
+    if ($PSBoundParameters.ContainsKey('PerPage')) {
+        $search += "per_page$PerPage"
+    }
+    if ($search) {
+        if ($uri.Contains('?')) {
+            $uri += '&'
+        } else {
+            $uri += '?'
+        }
+        $uri += ($search -join '&')
+    }
     if ($Method -eq [WebRequestMethod]::Get -or $PSCmdlet.ShouldProcess("Invoke", "Invoke Buildkite API request?", "API request")) {
         Invoke-RestMethod `
             -Method $Method `
@@ -57,7 +66,7 @@ function Get-BuildkiteBuild {
     param(
         [string] $Organization,
         [string] $Pipeline,
-        [string] $Branch,
+        [string[]] $Branch,
 
         [ValidateSet('running', 'scheduled', 'passed', 'failed', 'blocked', 'canceled', 'canceling', 'skipped', 'not_run', 'finished')]
         [string[]] $State,
@@ -82,11 +91,87 @@ function Get-BuildkiteBuild {
     } else {
         "builds"
     }
+    [string[]]$search = @()
     if ($State) {
-        $path += "?" + (($State | ForEach-Object { "state[]=$_" }) -join '&')
+        $search += ($State | ForEach-Object { "state[]=$_" })
+    }
+    if ($Branch) {
+        $search += ($Branch | ForEach-Object { "branch[]=$_" })
+    }
+    if ($search) {
+        $path += "?" + ($search -join '&')
     }
 
-    Invoke-BuildkiteAPIRequest $path -Token $Token -Page $Page -PerPage $PerPage
+    Invoke-BuildkiteAPIRequest $path -Token $Token -Page $Page -PerPage $PerPage | ForEach-Object { $_ } | ForEach-Object {
+        $_.PSTypeNames.Insert(0, 'PSBuildkite.Build')
+        $_
+    }
+}
+
+function Stop-BuildkiteBuild {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipelineByPropertyName, ParameterSetName = 'Url')]
+        [ValidateNotNullOrEmpty()]
+        [string] $Url,
+
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [string] $Organization,
+
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [string] $Pipeline,
+
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [int] $Number,
+
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [Security.SecureString] $Token
+    )
+
+    process {
+        if (-not $Url) {
+            $Url = "organizations/$Organization/pipelines/$Pipeline/builds/$Number"
+        }
+        $Url += "/cancel"
+        Invoke-BuildkiteAPIRequest -Method PUT $Url -Token $Token | ForEach-Object {
+            $_.PSTypeNames.Insert(0, 'PSBuildkite.Build')
+            $_
+        }
+    }
+}
+
+function Restart-BuildkiteBuild {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipelineByPropertyName, ParameterSetName = 'Url')]
+        [ValidateNotNullOrEmpty()]
+        [string] $Url,
+
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [string] $Organization,
+
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [string] $Pipeline,
+
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [int] $Number,
+
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [Security.SecureString] $Token
+    )
+
+    process {
+        if (-not $Url) {
+            $Url = "organizations/$Organization/pipelines/$Pipeline/builds/$Number"
+        }
+        $Url += "/rebuild"
+        Invoke-BuildkiteAPIRequest -Method PUT $Url -Token $Token | ForEach-Object {
+            $_.PSTypeNames.Insert(0, 'PSBuildkite.Build')
+            $_
+        }
+    }
 }
 
 function Get-BuildkiteOrganization {
