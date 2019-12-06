@@ -71,6 +71,9 @@ function Get-BuildkiteBuild {
         [ValidateSet('running', 'scheduled', 'passed', 'failed', 'blocked', 'canceled', 'canceling', 'skipped', 'not_run', 'finished')]
         [string[]] $State,
 
+        [DateTime] $CreatedFrom,
+        [DateTime] $CreatedTo,
+
         [int] $Number,
 
         [ValidateRange(1, [int]::MaxValue)]
@@ -91,6 +94,7 @@ function Get-BuildkiteBuild {
     } else {
         "builds"
     }
+
     [string[]]$search = @()
     if ($State) {
         $search += ($State | ForEach-Object { "state[]=$_" })
@@ -98,6 +102,13 @@ function Get-BuildkiteBuild {
     if ($Branch) {
         $search += ($Branch | ForEach-Object { "branch[]=$_" })
     }
+    if ($CreatedFrom) {
+        $search += "created_from=$($CreatedFrom.ToString('o'))"
+    }
+    if ($CreatedTo) {
+        $search += "created_to=$($CreatedTo.ToString('o'))"
+    }
+
     if ($search) {
         $path += "?" + ($search -join '&')
     }
