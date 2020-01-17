@@ -266,7 +266,7 @@ function Get-BuildkiteJobLog {
             }
             $Job.log_url
         } else {
-            "$Organization/pipelines/$Pipeline/builds/$Build/jobs/$JobId/log"
+            "organizations/$Organization/pipelines/$Pipeline/builds/$Build/jobs/$JobId/log"
         }
         Invoke-BuildkiteAPIRequest $LogUrl -Token $Token -Accept 'text/plain'
     }
