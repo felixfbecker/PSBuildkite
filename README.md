@@ -1,4 +1,4 @@
-# Buildkite for PowerShell <img src="https://buildkite.com/_next/static/assets/assets/images/brand-assets/buildkite-logo-portrait-on-light-715fd219.svg" height="90" align="left">
+# Buildkite for PowerShell <img src="./buildkite-logo.svg" height="90" align="left">
 
 [![powershellgallery](https://img.shields.io/powershellgallery/v/PSBuildkite.svg)](https://www.powershellgallery.com/packages/PSBuildkite)
 [![downloads](https://img.shields.io/powershellgallery/dt/PSBuildkite.svg)](https://www.powershellgallery.com/packages/PSBuildkite)
