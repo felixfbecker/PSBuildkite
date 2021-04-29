@@ -185,6 +185,46 @@ function Restart-BuildkiteBuild {
     }
 }
 
+function Restart-BuildkiteJob {
+    [CmdletBinding()]
+    param(
+        # The job ID
+        [Parameter(Mandatory, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
+        [string] $Id,
+
+        [Parameter(Mandatory, ValueFromPipelineByPropertyName, ParameterSetName = 'Url')]
+        [ValidateNotNullOrEmpty()]
+        [Alias('build_url')]
+        [string] $BuildUrl,
+
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [string] $Organization,
+
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [string] $Pipeline,
+
+        # The build number
+        [Parameter(Mandatory, ParameterSetName = 'Params')]
+        [int] $Number,
+
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [Security.SecureString] $Token
+    )
+
+    process {
+        if (-not $BuildUrl) {
+            $BuildUrl = "organizations/$Organization/pipelines/$Pipeline/builds/$Number"
+        }
+        $url = "$BuildUrl/jobs/$Id/retry"
+        Invoke-BuildkiteAPIRequest -Method PUT $url -Token $Token | ForEach-Object {
+            $_.PSTypeNames.Insert(0, 'PSBuildkite.Job')
+            $_
+        }
+    }
+}
+
 function Get-BuildkiteOrganization {
     [CmdletBinding()]
     param(
